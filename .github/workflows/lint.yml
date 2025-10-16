@@ -1,0 +1,115 @@
+name: Lint
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend/npm-shrinkwrap.json
+            backend/package-lock.json
+            backend/npm-shrinkwrap.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/**/requirements*.txt', 'backend/**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install frontend dependencies
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install backend Node dependencies
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: npm ci
+
+      - name: Install backend Python dependencies
+        if: hashFiles('backend/requirements*.txt') != '' || hashFiles('backend/pyproject.toml') != ''
+        working-directory: backend
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+          if [ -f pyproject.toml ]; then
+            pip install -e .
+          fi
+          pip install black flake8
+
+      - name: Run frontend ESLint
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: |
+          if npm run | grep -q " lint"; then
+            npm run lint
+          elif [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
+            npx eslint .
+          else
+            echo "No ESLint configuration found; skipping.";
+          fi
+
+      - name: Run frontend Prettier check
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: |
+          if npm run | grep -q " prettier:check"; then
+            npm run prettier:check
+          elif npm run | grep -q " format:check"; then
+            npm run format:check
+          elif [ -f .prettierrc ] || [ -f .prettierrc.js ] || [ -f .prettierrc.cjs ] || [ -f .prettierrc.json ] || [ -f .prettierrc.yml ] || [ -f .prettierrc.yaml ]; then
+            npx prettier --check .
+          else
+            echo "No Prettier configuration found; skipping.";
+          fi
+
+      - name: Run backend Python linters
+        if: hashFiles('backend/requirements*.txt') != '' || hashFiles('backend/pyproject.toml') != '' || hashFiles('backend/manage.py') != ''
+        working-directory: backend
+        run: |
+          if command -v flake8 >/dev/null 2>&1; then
+            flake8 .
+          fi
+          if command -v black >/dev/null 2>&1; then
+            black --check .
+          fi
+
+      - name: Run backend ESLint
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: |
+          if npm run | grep -q " lint"; then
+            npm run lint
+          elif [ -f .eslintrc.js ] || [ -f .eslintrc.cjs ] || [ -f .eslintrc.json ]; then
+            npx eslint .
+          else
+            echo "No backend ESLint configuration found; skipping.";
+          fi
