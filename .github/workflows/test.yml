@@ -1,0 +1,109 @@
+name: Test
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONDONTWRITEBYTECODE: 1
+      PYTHONUNBUFFERED: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        id: setup-node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: |
+            frontend/package-lock.json
+            frontend/npm-shrinkwrap.json
+            backend/package-lock.json
+            backend/npm-shrinkwrap.json
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip downloads
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/**/requirements*.txt', 'backend/**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install frontend dependencies
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install backend Node dependencies
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: npm ci
+
+      - name: Install backend Python dependencies
+        if: hashFiles('backend/requirements*.txt') != '' || hashFiles('backend/pyproject.toml') != ''
+        working-directory: backend
+        run: |
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
+          fi
+          if [ -f pyproject.toml ]; then
+            pip install -e .
+          fi
+          if [ -f manage.py ] || ls -1 tests 2>/dev/null | grep -q .; then
+            pip install pytest
+          fi
+
+      - name: Run backend Python tests
+        if: hashFiles('backend/requirements*.txt') != '' || hashFiles('backend/pyproject.toml') != '' || hashFiles('backend/manage.py') != ''
+        working-directory: backend
+        run: |
+          if [ -f manage.py ]; then
+            python manage.py test
+          elif [ -f pytest.ini ] || [ -f pyproject.toml ] || [ -d tests ]; then
+            pytest
+          else
+            echo "No Python test entrypoint found; skipping.";
+          fi
+
+      - name: Run backend Node tests
+        if: hashFiles('backend/package.json') != ''
+        working-directory: backend
+        run: |
+          if npm run | grep -q " test"; then
+            npm test -- --watch=false
+          else
+            echo "No backend Node test script found; skipping.";
+          fi
+
+      - name: Run frontend tests
+        if: hashFiles('frontend/package.json') != ''
+        working-directory: frontend
+        run: |
+          if npm run | grep -q " test"; then
+            npm test -- --watch=false
+          else
+            echo "No frontend test script found; skipping.";
+          fi
+
+      - name: Upload Playwright report
+        if: hashFiles('frontend/playwright.config.*') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          if-no-files-found: ignore
