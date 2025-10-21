@@ -64,7 +64,7 @@ If any of these are missing, the service will fall back to safe development defa
 ExportHub now bundles an async SQLAlchemy engine that verifies connectivity at startup and exposes a health check that reports the live database status. To connect the backend to Railway's managed PostgreSQL offering:
 
 1. Open the **Variables** tab of your Railway backend service and add the credentials supplied by Railway. At minimum provide:
-   - `DATABASE_URL` (use the internal host, e.g. `postgresql://<user>:<password>@postgres.railway.internal:5432/<db>`)
+   - `DATABASE_URL` (use the internal host, e.g. `postgresql://<user>:<password>@postgres.railway.internal:5432/<db>`). If you prefer to keep the default variables Railway injects (`PGHOST`, `PGUSER`, etc.), ExportHub now assembles a connection string automatically when `DATABASE_URL` is absent.
    - `BACKEND_SECRET_KEY`
    - `BACKEND_STORAGE_BUCKET`
 2. (Optional) Add `DATABASE_PUBLIC_URL` to mirror Railway's public connection string if you expose the database to other services.
