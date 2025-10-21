@@ -1,0 +1,12 @@
+[variables]
+PORT = "8080"
+
+[phases.setup]
+workingDirectory = "backend"
+
+[phases.install]
+cmds = ["pip install -r requirements.txt"]
+
+[phases.start]
+# Django example:
+cmd = "gunicorn -b 0.0.0.0:$PORT backend.app.wsgi:application"
