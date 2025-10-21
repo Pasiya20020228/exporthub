@@ -24,6 +24,20 @@ def _required(name: str, source: Mapping[str, str]) -> str:
     return value
 
 
+def _string(
+    name: str,
+    default: str,
+    source: Mapping[str, str],
+    allow_default: bool,
+) -> str:
+    value = source.get(name)
+    if value is None or value == "":
+        if allow_default:
+            return default
+        return _required(name, source)
+    return value
+
+
 def _bool(name: str, default: bool, source: Mapping[str, str]) -> bool:
     value = source.get(name)
     if value is None:
@@ -65,16 +79,29 @@ class BackendConfig:
     storage_bucket: str
 
 
-def load_config(env: Optional[Mapping[str, str]] = None) -> BackendConfig:
-    """Load configuration values from the provided environment."""
+def load_config(
+    env: Optional[Mapping[str, str]] = None, *, allow_defaults: bool = False
+) -> BackendConfig:
+    """Load configuration values from the provided environment.
+
+    When ``allow_defaults`` is True, sensible development defaults are supplied for
+    values that are missing so the application can boot in ephemeral environments
+    such as Railway deployments or local tests.
+    """
 
     source = _get_source(env)
     return BackendConfig(
         port=_int("BACKEND_PORT", 8000, source),
         debug=_bool("BACKEND_DEBUG", False, source),
-        database_url=_required("DATABASE_URL", source),
-        secret_key=_required("BACKEND_SECRET_KEY", source),
-        storage_bucket=_required("BACKEND_STORAGE_BUCKET", source),
+        database_url=_string(
+            "DATABASE_URL", "sqlite:///./exporthub.db", source, allow_defaults
+        ),
+        secret_key=_string(
+            "BACKEND_SECRET_KEY", "exporthub-development-secret", source, allow_defaults
+        ),
+        storage_bucket=_string(
+            "BACKEND_STORAGE_BUCKET", "exporthub-local", source, allow_defaults
+        ),
     )
 
 

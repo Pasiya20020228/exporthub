@@ -28,3 +28,25 @@ this is like temu...
   - Extend the workflow with environment-specific credential configuration by replacing the `Configure cloud credentials` step.
 
 Keep this section up to date as you add new services or modify the workflow structure so contributors understand how automation is configured.
+
+## Running the backend locally or on Railway
+
+The backend now ships with a lightweight FastAPI application so the project boots cleanly on Railway's default Nixpacks builder.
+
+```bash
+# Install dependencies
+pip install -r backend/requirements.txt
+
+# Run the development server
+uvicorn --app-dir backend app.main:app --reload
+```
+
+Railway automatically picks up the `Procfile` (`web: uvicorn --app-dir backend app.main:app ...`) and the `nixpacks.toml` file. When deploying manually, make sure the following environment variables are configured in your Railway service so the generated defaults can be replaced with production-ready values:
+
+- `BACKEND_PORT`
+- `BACKEND_DEBUG`
+- `DATABASE_URL`
+- `BACKEND_SECRET_KEY`
+- `BACKEND_STORAGE_BUCKET`
+
+If any of these are missing, the service will fall back to safe development defaults which keeps deployments healthy while you wire up secrets.
