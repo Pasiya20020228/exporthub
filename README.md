@@ -41,6 +41,12 @@ pip install -r requirements.txt
 ./start.sh
 ```
 
+> [!IMPORTANT]
+> The service targets Python 3.12. A `.mise.toml` file is included so Railway's builder
+> (and local environments that use [mise](https://mise.jdx.dev/)) automatically install
+> the compatible runtime. If you manage Python manually, install any 3.12.x release to
+> avoid build failures caused by incompatible wheels.
+
 The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration.
 
 When deploying manually, make sure the following environment variables are configured in your Railway service so the generated defaults can be replaced with production-ready values:
