@@ -5,9 +5,12 @@ from __future__ import annotations
 import logging
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import BackendConfig, MissingEnvironmentVariableError, load_config
 from .database import verify_database_connection
@@ -107,6 +110,16 @@ def create_app() -> FastAPI:
         )
         await verify_database_connection(settings)
         logger.info("Database connection verified")
+
+    static_dir = Path(__file__).resolve().parent / "static"
+    if static_dir.exists():
+        app.mount("/app", StaticFiles(directory=static_dir, html=True), name="frontend")
+
+        @app.get("/app", include_in_schema=False)
+        async def serve_frontend() -> FileResponse:
+            """Serve the single page application entrypoint."""
+
+            return FileResponse(static_dir / "index.html")
 
     return app
 

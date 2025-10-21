@@ -49,6 +49,31 @@ pip install -r requirements.txt
 
 The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration.
 
+### Running the frontend locally
+
+The React dashboard lives in the `frontend/` directory. It surfaces the backend's
+root and health endpoints and is published automatically during deployments.
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Provide the backend origin via `VITE_FRONTEND_API_BASE_URL` when developing
+against a remote backend. By default the dashboard falls back to the current
+origin, which works for local development when the Vite dev server proxies to the
+backend.
+
+To build the production assets locally run:
+
+```bash
+npm run build
+```
+
+The Vite configuration writes the build output to `backend/app/static`, which the
+FastAPI application serves under `/app`.
+
 When deploying manually, make sure the following environment variables are configured in your Railway service so the generated defaults can be replaced with production-ready values:
 
 - `BACKEND_PORT`
@@ -56,6 +81,7 @@ When deploying manually, make sure the following environment variables are confi
 - `DATABASE_URL`
 - `BACKEND_SECRET_KEY`
 - `BACKEND_STORAGE_BUCKET`
+- `FRONTEND_API_BASE_URL` (when running the Vite dev server outside of Railway)
 
 If any of these are missing, the service will fall back to safe development defaults which keeps deployments healthy while you wire up secrets.
 
@@ -71,3 +97,10 @@ ExportHub now bundles an async SQLAlchemy engine that verifies connectivity at s
 3. Redeploy the backend. During startup the application logs a “Database connection verified” message and the `/healthz` endpoint will return `"database": "connected"` when the connection succeeds.
 
 If the database becomes unreachable, the health endpoint reports `"database": "error"` and the logs contain the underlying exception. This makes it safe to run readiness probes against `/healthz` in production.
+
+### Railway build configuration
+
+`nixpacks.toml` installs Python and Node runtimes, prepares backend
+dependencies, builds the React dashboard, and finally boots the FastAPI server via
+`start.sh`. No additional Railway configuration is required beyond supplying the
+environment variables listed above.
