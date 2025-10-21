@@ -34,14 +34,16 @@ Keep this section up to date as you add new services or modify the workflow stru
 The backend now ships with a lightweight FastAPI application so the project boots cleanly on Railway's default Nixpacks builder.
 
 ```bash
-# Install dependencies
-pip install -r backend/requirements.txt
+# Install dependencies from the repository root
+pip install -r requirements.txt
 
-# Run the development server
-uvicorn --app-dir backend app.main:app --reload
+# Run the development server using the shared start script
+./start.sh
 ```
 
-Railway automatically picks up the `Procfile` (`web: uvicorn --app-dir backend app.main:app ...`) and the `nixpacks.toml` file. When deploying manually, make sure the following environment variables are configured in your Railway service so the generated defaults can be replaced with production-ready values:
+The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration.
+
+When deploying manually, make sure the following environment variables are configured in your Railway service so the generated defaults can be replaced with production-ready values:
 
 - `BACKEND_PORT`
 - `BACKEND_DEBUG`
