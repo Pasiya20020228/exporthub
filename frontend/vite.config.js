@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const outDir = resolve(__dirname, "../backend/app/static");
 
   return {
+    base: "/app/",
     build: {
       outDir,
       emptyOutDir: true,
