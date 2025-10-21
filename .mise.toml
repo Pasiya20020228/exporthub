@@ -1,5 +1,5 @@
 [tools]
-python = "3.12"
+python = "3.12.5"
 
 [env]
-PYTHON_VERSION = "3.12"
+PYTHON_VERSION = "3.12.5"

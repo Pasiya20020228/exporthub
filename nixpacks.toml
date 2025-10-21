@@ -1,6 +1,6 @@
 [variables]
 PORT = "8080"
-PYTHON_VERSION = "3.12"
+PYTHON_VERSION = "3.12.5"
 NODE_VERSION = "18"
 
 [phases.install]
