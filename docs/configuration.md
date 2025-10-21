@@ -65,7 +65,7 @@ The repository ships with a helper script for retrieving secrets from **AWS Syst
 
 ### Database configuration
 
-- `DATABASE_URL` must point to a PostgreSQL or SQLite database. When using PostgreSQL on Railway, prefer the internal hostname (e.g. `postgres.railway.internal`) to avoid SSL negotiation issues.
+- `DATABASE_URL` must point to a PostgreSQL or SQLite database. When using PostgreSQL on Railway, prefer the internal hostname (e.g. `postgres.railway.internal`) to avoid SSL negotiation issues. If you rely on Railway's default `PGHOST`, `PGUSER`, `PGPASSWORD`, `PGPORT`, and `PGDATABASE` variables instead of setting `DATABASE_URL`, the backend now assembles a compatible connection string automatically during startup.
 - The backend automatically upgrades PostgreSQL URLs to the async `asyncpg` driver and runs a `SELECT 1` probe during startup so deployment failures surface immediately.
 - Health checks hitting `/healthz` will report `database: connected` once the probe succeeds, otherwise they log the encountered exception and return `database: error`.
 

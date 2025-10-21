@@ -3,6 +3,7 @@
 import os
 from dataclasses import dataclass
 from typing import Mapping, MutableMapping, Optional, cast
+from urllib.parse import quote_plus
 
 
 class MissingEnvironmentVariableError(RuntimeError):
@@ -79,6 +80,40 @@ class BackendConfig:
     storage_bucket: str
 
 
+def _build_database_url(
+    source: Mapping[str, str], *, allow_default: bool
+) -> str:
+    """Resolve the database URL from common environment variable layouts."""
+
+    value = source.get("DATABASE_URL")
+    if value:
+        return value
+
+    # Railway exposes PostgreSQL credentials via PG* variables when the
+    # DATABASE_URL secret is not configured manually on the service. Assemble a
+    # SQLAlchemy-compatible URL from those pieces so deployments still succeed.
+    host = source.get("PGHOST")
+    database = source.get("PGDATABASE")
+    user = source.get("PGUSER")
+    password = source.get("PGPASSWORD")
+    port = source.get("PGPORT", "5432")
+
+    if host and database and user and password:
+        safe_password = quote_plus(password)
+        return "postgresql://{}:{}@{}:{}/{}".format(
+            user,
+            safe_password,
+            host,
+            port,
+            database,
+        )
+
+    if allow_default:
+        return "sqlite:///./exporthub.db"
+
+    raise MissingEnvironmentVariableError("Missing required environment variable: DATABASE_URL")
+
+
 def load_config(
     env: Optional[Mapping[str, str]] = None, *, allow_defaults: bool = False
 ) -> BackendConfig:
@@ -93,9 +128,7 @@ def load_config(
     return BackendConfig(
         port=_int("BACKEND_PORT", 8000, source),
         debug=_bool("BACKEND_DEBUG", False, source),
-        database_url=_string(
-            "DATABASE_URL", "sqlite:///./exporthub.db", source, allow_defaults
-        ),
+        database_url=_build_database_url(source, allow_default=allow_defaults),
         secret_key=_string(
             "BACKEND_SECRET_KEY", "exporthub-development-secret", source, allow_defaults
         ),
