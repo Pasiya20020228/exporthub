@@ -52,3 +52,16 @@ When deploying manually, make sure the following environment variables are confi
 - `BACKEND_STORAGE_BUCKET`
 
 If any of these are missing, the service will fall back to safe development defaults which keeps deployments healthy while you wire up secrets.
+
+### Connecting to a Railway-hosted PostgreSQL database
+
+ExportHub now bundles an async SQLAlchemy engine that verifies connectivity at startup and exposes a health check that reports the live database status. To connect the backend to Railway's managed PostgreSQL offering:
+
+1. Open the **Variables** tab of your Railway backend service and add the credentials supplied by Railway. At minimum provide:
+   - `DATABASE_URL` (use the internal host, e.g. `postgresql://<user>:<password>@postgres.railway.internal:5432/<db>`)
+   - `BACKEND_SECRET_KEY`
+   - `BACKEND_STORAGE_BUCKET`
+2. (Optional) Add `DATABASE_PUBLIC_URL` to mirror Railway's public connection string if you expose the database to other services.
+3. Redeploy the backend. During startup the application logs a “Database connection verified” message and the `/healthz` endpoint will return `"database": "connected"` when the connection succeeds.
+
+If the database becomes unreachable, the health endpoint reports `"database": "error"` and the logs contain the underlying exception. This makes it safe to run readiness probes against `/healthz` in production.

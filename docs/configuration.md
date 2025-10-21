@@ -63,6 +63,12 @@ The repository ships with a helper script for retrieving secrets from **AWS Syst
 - `frontend/src/config.js` validates required variables (`FRONTEND_API_BASE_URL`) and ensures numeric/boolean variables are parsed correctly.
 - Integrations should import these modules instead of re-reading environment variables to guarantee consistent validation.
 
+### Database configuration
+
+- `DATABASE_URL` must point to a PostgreSQL or SQLite database. When using PostgreSQL on Railway, prefer the internal hostname (e.g. `postgres.railway.internal`) to avoid SSL negotiation issues.
+- The backend automatically upgrades PostgreSQL URLs to the async `asyncpg` driver and runs a `SELECT 1` probe during startup so deployment failures surface immediately.
+- Health checks hitting `/healthz` will report `database: connected` once the probe succeeds, otherwise they log the encountered exception and return `database: error`.
+
 ## Handling Sensitive Artifacts
 
 - `.gitignore` contains patterns that exclude `.env` files and generated secrets.
