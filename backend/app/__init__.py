@@ -9,7 +9,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import BackendConfig, MissingEnvironmentVariableError, load_config
@@ -70,9 +70,15 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    @app.get("/", tags=["system"])
+    static_dir = Path(__file__).resolve().parent / "static"
+    static_available = static_dir.exists()
+
+    @app.get("/", tags=["system"], include_in_schema=not static_available)
     async def read_root(settings: BackendConfig = Depends(get_settings)) -> dict[str, str]:
         """Provide a simple landing route for uptime checks."""
+
+        if static_available:
+            return RedirectResponse(url="/app", status_code=307)
 
         return {
             "message": "ExportHub backend is running",
@@ -111,8 +117,7 @@ def create_app() -> FastAPI:
         await verify_database_connection(settings)
         logger.info("Database connection verified")
 
-    static_dir = Path(__file__).resolve().parent / "static"
-    if static_dir.exists():
+    if static_available:
         app.mount("/app", StaticFiles(directory=static_dir, html=True), name="frontend")
 
         @app.get("/app", include_in_schema=False)

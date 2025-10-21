@@ -72,7 +72,9 @@ npm run build
 ```
 
 The Vite configuration writes the build output to `backend/app/static`, which the
-FastAPI application serves under `/app`.
+FastAPI application serves under `/app`. When those files are present the backend's
+root route automatically redirects to `/app`, so visiting your Railway preview domain
+will load the dashboard instead of the JSON health payload.
 
 When deploying manually, make sure the following environment variables are configured in your Railway service so the generated defaults can be replaced with production-ready values:
 
