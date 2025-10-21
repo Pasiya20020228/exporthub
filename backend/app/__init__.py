@@ -10,6 +10,7 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import BackendConfig, MissingEnvironmentVariableError, load_config
+from .database import verify_database_connection
 
 logger = logging.getLogger(__name__)
 
@@ -79,10 +80,19 @@ def create_app() -> FastAPI:
     async def healthcheck(settings: BackendConfig = Depends(get_settings)) -> dict[str, str]:
         """Return a health payload that indicates configuration readiness."""
 
+        database_status = "unconfigured"
+        if settings.database_url:
+            try:
+                await verify_database_connection(settings)
+                database_status = "connected"
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.exception("Database health check failed: %s", exc)
+                database_status = "error"
+
         return {
             "status": "ok",
             "debug": str(settings.debug).lower(),
-            "database": "configured" if settings.database_url else "unconfigured",
+            "database": database_status,
         }
 
     @app.on_event("startup")
@@ -95,8 +105,10 @@ def create_app() -> FastAPI:
             settings.port,
             settings.debug,
         )
+        await verify_database_connection(settings)
+        logger.info("Database connection verified")
 
     return app
 
 
-__all__ = ["BackendConfig", "create_app", "get_settings"]
+__all__ = ["BackendConfig", "create_app", "get_settings", "verify_database_connection"]
