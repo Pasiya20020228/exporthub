@@ -12,10 +12,10 @@ function parseBoolean(value, defaultValue) {
   }
 
   const normalised = String(value).toLowerCase();
-  if (['1', 'true', 't', 'yes', 'y'].includes(normalised)) {
+  if (["1", "true", "t", "yes", "y"].includes(normalised)) {
     return true;
   }
-  if (['0', 'false', 'f', 'no', 'n'].includes(normalised)) {
+  if (["0", "false", "f", "no", "n"].includes(normalised)) {
     return false;
   }
   throw new Error(
@@ -23,23 +23,37 @@ function parseBoolean(value, defaultValue) {
   );
 }
 
-function buildConfig(env) {
-  const source = env || (typeof process !== 'undefined' && process.env
-    ? process.env
-    : {});
+function resolveSource(env) {
+  if (env && typeof env === "object") {
+    return env;
+  }
 
-  const requiredVariables = ['FRONTEND_API_BASE_URL'];
-  const missing = requiredVariables.filter(
-    (name) => !source[name] || String(source[name]).length === 0
-  );
+  if (typeof import.meta !== "undefined" && import.meta.env) {
+    return import.meta.env;
+  }
 
-  if (missing.length > 0) {
+  if (typeof process !== "undefined" && process.env) {
+    return process.env;
+  }
+
+  return {};
+}
+
+export function buildConfig(env) {
+  const source = resolveSource(env);
+
+  const apiBaseUrl =
+    source.VITE_FRONTEND_API_BASE_URL ||
+    source.FRONTEND_API_BASE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : undefined);
+
+  if (!apiBaseUrl) {
     throw new Error(
-      `Missing required environment variables: ${missing.join(', ')}`
+      "Missing required environment variables: FRONTEND_API_BASE_URL"
     );
   }
 
-  const portValue = source.FRONTEND_PORT ?? '3000';
+  const portValue = source.VITE_FRONTEND_PORT || source.FRONTEND_PORT || "3000";
   const port = Number(portValue);
   if (Number.isNaN(port)) {
     throw new Error(
@@ -49,15 +63,17 @@ function buildConfig(env) {
 
   return Object.freeze({
     port,
-    apiBaseUrl: source.FRONTEND_API_BASE_URL,
-    enableAnalytics: parseBoolean(source.FRONTEND_ENABLE_ANALYTICS, false),
-    sentryDsn: source.FRONTEND_SENTRY_DSN || null,
+    apiBaseUrl,
+    enableAnalytics: parseBoolean(
+      source.VITE_FRONTEND_ENABLE_ANALYTICS ??
+        source.FRONTEND_ENABLE_ANALYTICS,
+      false
+    ),
+    sentryDsn:
+      source.VITE_FRONTEND_SENTRY_DSN || source.FRONTEND_SENTRY_DSN || null,
   });
 }
 
-const config = buildConfig();
+export const config = buildConfig();
 
-module.exports = {
-  config,
-  buildConfig,
-};
+export default config;
