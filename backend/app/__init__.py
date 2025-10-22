@@ -7,7 +7,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -73,11 +73,19 @@ def create_app() -> FastAPI:
     static_dir = Path(__file__).resolve().parent / "static"
     static_available = static_dir.exists()
 
+    def _wants_html(request: Request) -> bool:
+        accept = request.headers.get("accept")
+        if not accept:
+            return False
+        return "text/html" in accept.lower()
+
     @app.get("/", tags=["system"], include_in_schema=not static_available)
-    async def read_root(settings: BackendConfig = Depends(get_settings)) -> dict[str, str]:
+    async def read_root(
+        request: Request, settings: BackendConfig = Depends(get_settings)
+    ) -> dict[str, str]:
         """Provide a simple landing route for uptime checks."""
 
-        if static_available:
+        if static_available and _wants_html(request):
             return RedirectResponse(url="/app", status_code=307)
 
         return {
