@@ -102,7 +102,8 @@ If the database becomes unreachable, the health endpoint reports `"database": "e
 
 ### Railway build configuration
 
-`nixpacks.toml` installs Python and Node runtimes, prepares backend
-dependencies, builds the React dashboard, and finally boots the FastAPI server via
-`start.sh`. No additional Railway configuration is required beyond supplying the
-environment variables listed above.
+`nixpacks.toml` installs Python and Node runtimes (using Nix's `nodejs_18`
+package so `npm` is available during both the build and runtime phases), prepares
+backend dependencies, builds the React dashboard, and finally boots the FastAPI
+server via `start.sh`. No additional Railway configuration is required beyond
+supplying the environment variables listed above.
