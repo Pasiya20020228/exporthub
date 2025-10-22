@@ -10,7 +10,6 @@
 # Node tooling
 node_modules/
 frontend/dist/
-backend/app/static/
 
 # Python tooling
 __pycache__/
