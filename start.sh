@@ -16,16 +16,23 @@ PORT="${PORT:-8080}"
 FRONTEND_DIR="frontend"
 STATIC_DIR="backend/app/static"
 
-if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
-  echo "Installing frontend dependencies..."
-  npm install --prefix "$FRONTEND_DIR"
-fi
+if command -v npm >/dev/null 2>&1; then
+  if [ ! -d "$FRONTEND_DIR/node_modules" ]; then
+    echo "Installing frontend dependencies..."
+    npm install --prefix "$FRONTEND_DIR"
+  fi
 
-if [ ! -f "$STATIC_DIR/index.html" ]; then
-  echo "Building frontend dashboard..."
-  npm run build --prefix "$FRONTEND_DIR"
+  if [ ! -f "$STATIC_DIR/index.html" ]; then
+    echo "Building frontend dashboard..."
+    npm run build --prefix "$FRONTEND_DIR"
+  else
+    echo "Using existing frontend build in $STATIC_DIR"
+  fi
 else
-  echo "Using existing frontend build in $STATIC_DIR"
+  echo "npm command not found; skipping frontend dependency installation and build." >&2
+  if [ ! -f "$STATIC_DIR/index.html" ]; then
+    echo "Frontend assets are missing. Install Node.js and npm to build the dashboard." >&2
+  fi
 fi
 
 # Run the FastAPI backend
