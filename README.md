@@ -47,7 +47,7 @@ pip install -r requirements.txt
 > the compatible runtime. If you manage Python manually, install any 3.12.x release to
 > avoid build failures caused by incompatible wheels.
 
-The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration.
+The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration. The script now also installs/builds the React dashboard automatically when the compiled assets are missing so both backend APIs and the UI are available from a single Railway service.
 
 ### Running the frontend locally
 
@@ -83,7 +83,7 @@ When deploying manually, make sure the following environment variables are confi
 - `DATABASE_URL`
 - `BACKEND_SECRET_KEY`
 - `BACKEND_STORAGE_BUCKET`
-- `FRONTEND_API_BASE_URL` (when running the Vite dev server outside of Railway)
+- `FRONTEND_API_BASE_URL` (only required when running the Vite dev server outside of Railway; the production build falls back to the backend origin automatically)
 
 If any of these are missing, the service will fall back to safe development defaults which keeps deployments healthy while you wire up secrets.
 
