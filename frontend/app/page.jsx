@@ -1,348 +1,115 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import useSWR from 'swr';
+import Link from 'next/link';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || '').replace(/\/$/, '');
+import { useSession } from './providers/SessionProvider';
 
-const buildUrl = (path) => `${API_BASE}${path}`;
+const highlights = [
+  {
+    title: 'Global-ready catalogue',
+    description:
+      'Showcase export-ready goods with detailed specifications, certifications, and pricing in one place.',
+  },
+  {
+    title: 'Buyer confidence',
+    description:
+      'Real-time product availability and transparent seller profiles build trusted trade relationships.',
+  },
+  {
+    title: 'Trade workflow automation',
+    description:
+      'Capture orders, manage fulfilment, and keep stakeholders aligned with streamlined digital tools.',
+  },
+];
 
-const fetcher = async (url) => {
-  const response = await fetch(url, { cache: 'no-store' });
-  if (!response.ok) {
-    const payload = await response.json().catch(() => ({}));
-    const message = payload?.detail || 'Unexpected API error';
-    throw new Error(message);
-  }
-  return response.json();
-};
+const steps = [
+  {
+    title: 'Create your ExportHub account',
+    detail: 'Sign up in minutes to unlock the marketplace and personalise your company profile.',
+  },
+  {
+    title: 'List products with ease',
+    detail: 'Admins can publish rich product listings, manage pricing, and update inventory instantly.',
+  },
+  {
+    title: 'Connect with global buyers',
+    detail: 'Securely accept orders from verified buyers and keep conversations organised.',
+  },
+];
 
 export default function HomePage() {
-  const [productForm, setProductForm] = useState({
-    name: '',
-    description: '',
-    price: '',
-    sellerName: '',
-  });
-  const [orderForm, setOrderForm] = useState({
-    productId: '',
-    buyerName: '',
-    quantity: 1,
-  });
-  const [statusMessage, setStatusMessage] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const {
-    data: products,
-    error: productsError,
-    isLoading: productsLoading,
-    mutate: refreshProducts,
-  } = useSWR(buildUrl('/products/'), fetcher);
-
-  const {
-    data: orders,
-    error: ordersError,
-    isLoading: ordersLoading,
-    mutate: refreshOrders,
-  } = useSWR(buildUrl('/orders/'), fetcher);
-
-  const productOptions = useMemo(() => {
-    return (products || []).map((product) => ({
-      value: product.id,
-      label: `${product.name} — $${Number(product.price).toFixed(2)}`,
-    }));
-  }, [products]);
-
-  const productLookup = useMemo(() => {
-    const mapping = new Map();
-    (products || []).forEach((product) => mapping.set(product.id, product));
-    return mapping;
-  }, [products]);
-
-  const resetStatus = () => setStatusMessage(null);
-
-  const handleProductSubmit = async (event) => {
-    event.preventDefault();
-    resetStatus();
-
-    if (!productForm.name || !productForm.description || !productForm.sellerName) {
-      setStatusMessage({ type: 'error', message: 'Fill in all product fields before submitting.' });
-      return;
-    }
-
-    const priceValue = Number(productForm.price);
-    if (Number.isNaN(priceValue) || priceValue < 0) {
-      setStatusMessage({ type: 'error', message: 'Enter a valid price for the product.' });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        name: productForm.name,
-        description: productForm.description,
-        seller_name: productForm.sellerName,
-        price: priceValue.toFixed(2),
-      };
-      const response = await fetch(buildUrl('/products/'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload?.detail || 'Unable to create product.');
-      }
-      await refreshProducts();
-      setProductForm({ name: '', description: '', price: '', sellerName: '' });
-      setStatusMessage({ type: 'success', message: 'Product listed successfully!' });
-    } catch (error) {
-      setStatusMessage({ type: 'error', message: error.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleOrderSubmit = async (event) => {
-    event.preventDefault();
-    resetStatus();
-
-    if (!orderForm.productId) {
-      setStatusMessage({ type: 'error', message: 'Select a product to purchase.' });
-      return;
-    }
-    if (!orderForm.buyerName) {
-      setStatusMessage({ type: 'error', message: 'Enter the buyer name to place an order.' });
-      return;
-    }
-    const quantityValue = Number(orderForm.quantity);
-    if (!Number.isInteger(quantityValue) || quantityValue <= 0) {
-      setStatusMessage({ type: 'error', message: 'Order quantity must be at least 1.' });
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const payload = {
-        product_id: Number(orderForm.productId),
-        buyer_name: orderForm.buyerName,
-        quantity: quantityValue,
-      };
-      const response = await fetch(buildUrl('/orders/'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload?.detail || 'Unable to create order.');
-      }
-      await Promise.all([refreshOrders(), refreshProducts()]);
-      setOrderForm({ productId: '', buyerName: '', quantity: 1 });
-      setStatusMessage({ type: 'success', message: 'Order placed successfully!' });
-    } catch (error) {
-      setStatusMessage({ type: 'error', message: error.message });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const { isAuthenticated, user } = useSession();
 
   return (
-    <main>
-      <section className="hero">
-        <div className="hero-content">
-          <h1>ExportHub Marketplace</h1>
+    <>
+      <section className="hero-section">
+        <div>
+          <h1>Powering modern export businesses</h1>
           <p>
-            Welcome to ExportHub — a digital trade marketplace where global buyers and sellers
-            meet. Discover curated export-ready products or list your own catalogue in minutes.
+            ExportHub brings together international buyers and export-ready suppliers with a beautifully
+            crafted digital experience. Launch curated product showcases, manage orders in real time,
+            and give your team a collaborative hub for cross-border trade.
           </p>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginTop: '2rem' }}>
+            {isAuthenticated ? (
+              <Link href="/products" className="cta-button">
+                Browse marketplace
+              </Link>
+            ) : (
+              <>
+                <Link href="/signup" className="cta-button">
+                  Create a free account
+                </Link>
+                <Link href="/login" className="ghost">
+                  I already have an account
+                </Link>
+              </>
+            )}
+          </div>
         </div>
         <div className="hero-card">
-          <h2>Start trading instantly</h2>
-          <p>
-            List your products, showcase pricing, and receive purchase requests without leaving the
-            platform.
-          </p>
-          <ul>
-            <li>✅ Create product listings with pricing and descriptions</li>
-            <li>✅ Accept orders directly from interested buyers</li>
-            <li>✅ Manage activity with a lightweight SQLite database</li>
+          <h3>Why ExportHub?</h3>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '1.5rem 0 0', display: 'grid', gap: '1rem' }}>
+            <li>• Unified catalogue and order management for export teams</li>
+            <li>• Secure authentication for both buyers and administrators</li>
+            <li>• Responsive design optimised for busy trade professionals</li>
           </ul>
         </div>
       </section>
 
-      {statusMessage && (
-        <div
-          style={{
-            background: statusMessage.type === 'error' ? '#fee2e2' : '#dcfce7',
-            color: statusMessage.type === 'error' ? '#b91c1c' : '#166534',
-            borderRadius: '0.75rem',
-            padding: '1rem 1.5rem',
-            marginBottom: '2rem',
-          }}
-        >
-          {statusMessage.message}
+      <section className="section">
+        <div className="section-header">
+          <h2>Designed for high-performing trade teams</h2>
+          {isAuthenticated && user?.role === 'admin' ? (
+            <Link href="/dashboard" className="ghost">
+              Go to admin dashboard
+            </Link>
+          ) : null}
         </div>
-      )}
-
-      <section className="section">
-        <h2>List a product</h2>
-        <form onSubmit={handleProductSubmit}>
-          <label>
-            Product name
-            <input
-              type="text"
-              value={productForm.name}
-              onChange={(event) => setProductForm((state) => ({ ...state, name: event.target.value }))}
-              placeholder="Premium cotton shirts"
-              required
-            />
-          </label>
-          <label>
-            Seller name
-            <input
-              type="text"
-              value={productForm.sellerName}
-              onChange={(event) =>
-                setProductForm((state) => ({ ...state, sellerName: event.target.value }))
-              }
-              placeholder="Global Textiles Co."
-              required
-            />
-          </label>
-          <label>
-            Price (USD)
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={productForm.price}
-              onChange={(event) => setProductForm((state) => ({ ...state, price: event.target.value }))}
-              placeholder="1200.00"
-              required
-            />
-          </label>
-          <label>
-            Description
-            <textarea
-              rows={4}
-              value={productForm.description}
-              onChange={(event) =>
-                setProductForm((state) => ({ ...state, description: event.target.value }))
-              }
-              placeholder="Detail the product specifications, packaging, and export terms."
-              required
-            />
-          </label>
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Publishing…' : 'Publish product'}
-          </button>
-        </form>
+        <div className="card-grid">
+          {highlights.map((item) => (
+            <article key={item.title} className="card">
+              <strong>{item.title}</strong>
+              <p>{item.description}</p>
+            </article>
+          ))}
+        </div>
       </section>
 
       <section className="section">
-        <h2>Available products</h2>
-        {productsLoading && <p>Loading product catalogue…</p>}
-        {productsError && <p>Unable to load products: {productsError.message}</p>}
-        {!productsLoading && !productsError && products?.length === 0 && (
-          <p>No listings yet. Be the first to publish a product.</p>
-        )}
-        {!productsLoading && !productsError && products?.length > 0 && (
-          <div className="card-grid">
-            {products.map((product) => (
-              <article key={product.id} className="card">
-                <small>Seller: {product.seller_name}</small>
-                <strong>{product.name}</strong>
-                <p>{product.description}</p>
-                <p>
-                  <strong>${Number(product.price).toFixed(2)}</strong>
-                </p>
-                <small>
-                  Listing ID: {product.id} • Added {new Date(product.created_at).toLocaleString()}
-                </small>
-              </article>
-            ))}
-          </div>
-        )}
+        <div className="section-header">
+          <h2>Start transacting in three simple steps</h2>
+        </div>
+        <div className="card-grid">
+          {steps.map((step, index) => (
+            <article key={step.title} className="card">
+              <small>Step {index + 1}</small>
+              <strong>{step.title}</strong>
+              <p>{step.detail}</p>
+            </article>
+          ))}
+        </div>
       </section>
-
-      <section className="section">
-        <h2>Place an order</h2>
-        <form onSubmit={handleOrderSubmit}>
-          <label>
-            Product
-            <select
-              value={orderForm.productId}
-              onChange={(event) =>
-                setOrderForm((state) => ({ ...state, productId: event.target.value }))
-              }
-              required
-            >
-              <option value="">Select a product</option>
-              {productOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Buyer name
-            <input
-              type="text"
-              value={orderForm.buyerName}
-              onChange={(event) =>
-                setOrderForm((state) => ({ ...state, buyerName: event.target.value }))
-              }
-              placeholder="Import Hub LLC"
-              required
-            />
-          </label>
-          <label>
-            Quantity
-            <input
-              type="number"
-              min="1"
-              value={orderForm.quantity}
-              onChange={(event) =>
-                setOrderForm((state) => ({ ...state, quantity: event.target.value }))
-              }
-              required
-            />
-          </label>
-          <button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Processing…' : 'Submit order'}
-          </button>
-        </form>
-      </section>
-
-      <section className="section">
-        <h2>Recent orders</h2>
-        {ordersLoading && <p>Loading buyer activity…</p>}
-        {ordersError && <p>Unable to load orders: {ordersError.message}</p>}
-        {!ordersLoading && !ordersError && orders?.length === 0 && <p>No orders yet.</p>}
-        {!ordersLoading && !ordersError && orders?.length > 0 && (
-          <div className="card-grid">
-            {orders.map((order) => (
-              <article key={order.id} className="card">
-                <strong>Order #{order.id}</strong>
-                <p>
-                  Buyer: {order.buyer_name}
-                  <br />Quantity: {order.quantity}
-                </p>
-                <p>
-                  Product:{' '}
-                  {productLookup.get(order.product_id)?.name || `#${order.product_id}`}
-                </p>
-                <p>
-                  Total value: <strong>${Number(order.total_price).toFixed(2)}</strong>
-                </p>
-                <small>Placed {new Date(order.created_at).toLocaleString()}</small>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-    </main>
+    </>
   );
 }

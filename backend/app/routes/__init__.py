@@ -1,5 +1,5 @@
 """Router package for the ExportHub API."""
 
-from . import orders, products
+from . import auth, orders, products
 
-__all__ = ["orders", "products"]
+__all__ = ["auth", "orders", "products"]
