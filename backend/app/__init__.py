@@ -126,8 +126,9 @@ def create_app() -> FastAPI:
         await init_models(settings)
         logger.info("Database connection verified")
 
-    from .routes import orders, products
+    from .routes import auth, orders, products
 
+    app.include_router(auth.router)
     app.include_router(products.router)
     app.include_router(orders.router)
 

@@ -2,12 +2,12 @@
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Response, status
 from sqlalchemy import select
 
-from ..dependencies import SessionDep
+from ..dependencies import AdminDep, SessionDep
 from ..models import Product
-from ..schemas import ProductCreate, ProductRead
+from ..schemas import ProductCreate, ProductRead, ProductUpdate
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -22,7 +22,7 @@ async def list_products(session: SessionDep) -> list[Product]:
 
 @router.post("/", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    payload: ProductCreate, session: SessionDep
+    payload: ProductCreate, session: SessionDep, _: AdminDep
 ) -> Product:
     """Create a new product listing."""
 
@@ -49,3 +49,28 @@ async def get_product(product_id: int, session: SessionDep) -> Product:
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found")
     return product
+
+
+@router.put("/{product_id}", response_model=ProductRead)
+async def update_product(
+    product_id: int, payload: ProductUpdate, session: SessionDep, _: AdminDep
+) -> Product:
+    """Update an existing product listing."""
+
+    product = await get_product(product_id, session)
+
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(product, field, value)
+
+    await session.flush()
+    await session.refresh(product)
+    return product
+
+
+@router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(product_id: int, session: SessionDep, _: AdminDep) -> Response:
+    """Remove a product from the catalogue."""
+
+    product = await get_product(product_id, session)
+    await session.delete(product)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
