@@ -9,7 +9,10 @@
 
 # Node tooling
 node_modules/
+frontend/.next/
 frontend/dist/
+backend/app/static/*
+!backend/app/static/.gitkeep
 
 # Python tooling
 __pycache__/
