@@ -48,6 +48,12 @@ def _get_sessionmaker(database_url: str) -> async_sessionmaker[AsyncSession]:
     return async_sessionmaker(engine, expire_on_commit=False)
 
 
+def get_sessionmaker(database_url: str) -> async_sessionmaker[AsyncSession]:
+    """Expose the cached session factory for dependency wiring."""
+
+    return _get_sessionmaker(database_url)
+
+
 @asynccontextmanager
 async def lifespan_session(settings: BackendConfig) -> AsyncIterator[AsyncSession]:
     """Provide an async session scoped to a FastAPI lifespan event."""
@@ -72,7 +78,19 @@ async def verify_database_connection(settings: BackendConfig) -> None:
         await connection.execute(text("SELECT 1"))
 
 
+async def init_models(settings: BackendConfig) -> None:
+    """Create database tables when they are missing."""
+
+    from .models import Base
+
+    engine = _get_engine(settings.database_url)
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+
+
 __all__ = [
     "lifespan_session",
+    "get_sessionmaker",
+    "init_models",
     "verify_database_connection",
 ]

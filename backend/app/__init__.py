@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .config import BackendConfig, MissingEnvironmentVariableError, load_config
-from .database import verify_database_connection
+from .database import init_models, verify_database_connection
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +71,7 @@ def create_app() -> FastAPI:
     )
 
     static_dir = Path(__file__).resolve().parent / "static"
-    static_available = static_dir.exists()
+    static_available = static_dir.exists() and (static_dir / "index.html").exists()
 
     def _wants_html(request: Request) -> bool:
         accept = request.headers.get("accept")
@@ -123,7 +123,13 @@ def create_app() -> FastAPI:
             settings.debug,
         )
         await verify_database_connection(settings)
+        await init_models(settings)
         logger.info("Database connection verified")
+
+    from .routes import orders, products
+
+    app.include_router(products.router)
+    app.include_router(orders.router)
 
     if static_available:
         app.mount("/app", StaticFiles(directory=static_dir, html=True), name="frontend")

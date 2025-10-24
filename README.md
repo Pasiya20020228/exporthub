@@ -47,12 +47,12 @@ pip install -r requirements.txt
 > the compatible runtime. If you manage Python manually, install any 3.12.x release to
 > avoid build failures caused by incompatible wheels.
 
-The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration. The script now also installs/builds the React dashboard automatically when the compiled assets are missing so both backend APIs and the UI are available from a single Railway service.
+The root-level `requirements.txt` simply re-uses the backend dependency list so the builder can detect Python automatically, while `start.sh` mirrors the production launch command that Railway executes. `Procfile` and `nixpacks.toml` both reference the script, allowing Railway's Railpack builder to identify a supported language and boot the app without additional configuration. The script now also installs/builds the Next.js dashboard automatically when the compiled assets are missing so both backend APIs and the UI are available from a single Railway service.
 
 ### Running the frontend locally
 
-The React dashboard lives in the `frontend/` directory. It surfaces the backend's
-root and health endpoints and is published automatically during deployments.
+The Next.js dashboard lives in the `frontend/` directory. It surfaces the backend's
+commerce APIs and is published automatically during deployments.
 
 ```bash
 cd frontend
@@ -60,9 +60,9 @@ npm install
 npm run dev
 ```
 
-Provide the backend origin via `VITE_FRONTEND_API_BASE_URL` when developing
+Provide the backend origin via `NEXT_PUBLIC_API_BASE_URL` when developing
 against a remote backend. By default the dashboard falls back to the current
-origin, which works for local development when the Vite dev server proxies to the
+origin, which works for local development when the Next dev server proxies to the
 backend.
 
 To build the production assets locally run:
@@ -71,7 +71,7 @@ To build the production assets locally run:
 npm run build
 ```
 
-The Vite configuration writes the build output to `backend/app/static`, which the
+The export configuration writes the build output to `backend/app/static`, which the
 FastAPI application serves under `/app`. When those files are present the backend's
 root route automatically redirects to `/app`, so visiting your Railway preview domain
 will load the dashboard instead of the JSON health payload.
@@ -83,27 +83,32 @@ When deploying manually, make sure the following environment variables are confi
 - `DATABASE_URL`
 - `BACKEND_SECRET_KEY`
 - `BACKEND_STORAGE_BUCKET`
-- `FRONTEND_API_BASE_URL` (only required when running the Vite dev server outside of Railway; the production build falls back to the backend origin automatically)
+- `NEXT_PUBLIC_API_BASE_URL` (only required when running the Next dev server outside of Railway; the production build falls back to the backend origin automatically)
 
 If any of these are missing, the service will fall back to safe development defaults which keeps deployments healthy while you wire up secrets.
 
 ### Connecting to a Railway-hosted PostgreSQL database
 
-ExportHub now bundles an async SQLAlchemy engine that verifies connectivity at startup and exposes a health check that reports the live database status. To connect the backend to Railway's managed PostgreSQL offering:
-
-1. Open the **Variables** tab of your Railway backend service and add the credentials supplied by Railway. At minimum provide:
-   - `DATABASE_URL` (use the internal host, e.g. `postgresql://<user>:<password>@postgres.railway.internal:5432/<db>`). If you prefer to keep the default variables Railway injects (`PGHOST`, `PGUSER`, etc.), ExportHub now assembles a connection string automatically when `DATABASE_URL` is absent.
-   - `BACKEND_SECRET_KEY`
-   - `BACKEND_STORAGE_BUCKET`
-2. (Optional) Add `DATABASE_PUBLIC_URL` to mirror Railway's public connection string if you expose the database to other services.
-3. Redeploy the backend. During startup the application logs a “Database connection verified” message and the `/healthz` endpoint will return `"database": "connected"` when the connection succeeds.
+ExportHub now bundles an async SQLAlchemy engine backed by SQLite by default. When deploying to Railway you can continue using the embedded database or supply a managed PostgreSQL/SQLite connection string via `DATABASE_URL`. If `DATABASE_URL` is not supplied, the service automatically provisions `sqlite:///./exporthub.db` alongside the application files so previews continue to work without additional setup.
 
 If the database becomes unreachable, the health endpoint reports `"database": "error"` and the logs contain the underlying exception. This makes it safe to run readiness probes against `/healthz` in production.
+
+### Commerce APIs
+
+The backend now exposes first-party commerce endpoints that power the marketplace experience:
+
+- `GET /products/` — list all available product listings.
+- `POST /products/` — create a new product (requires `name`, `description`, `seller_name`, `price`).
+- `GET /products/{id}` — retrieve a specific product.
+- `GET /orders/` — list recorded orders.
+- `POST /orders/` — place a new order for a product.
+
+All routes persist data using SQLAlchemy models stored in SQLite by default. The startup routine ensures database tables exist automatically so Railway deployments succeed without manual migrations.
 
 ### Railway build configuration
 
 `nixpacks.toml` installs Python and Node runtimes (using Nix's `nodejs_18`
 package so `npm` is available during both the build and runtime phases), prepares
-backend dependencies, builds the React dashboard, and finally boots the FastAPI
+backend dependencies, builds the Next.js dashboard, and finally boots the FastAPI
 server via `start.sh`. No additional Railway configuration is required beyond
 supplying the environment variables listed above.
